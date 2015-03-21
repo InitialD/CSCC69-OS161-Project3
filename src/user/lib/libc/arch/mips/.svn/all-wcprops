@@ -1,0 +1,11 @@
+K 25
+svn:wc:ra_dav:version-url
+V 64
+/svn/cscc69w15/group22/a3/!svn/ver/1/src/user/lib/libc/arch/mips
+END
+syscalls-mips.S
+K 25
+svn:wc:ra_dav:version-url
+V 80
+/svn/cscc69w15/group22/a3/!svn/ver/1/src/user/lib/libc/arch/mips/syscalls-mips.S
+END

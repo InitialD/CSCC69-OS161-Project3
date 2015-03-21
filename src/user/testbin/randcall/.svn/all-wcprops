@@ -1,0 +1,35 @@
+K 25
+svn:wc:ra_dav:version-url
+V 62
+/svn/cscc69w15/group22/a3/!svn/ver/1/src/user/testbin/randcall
+END
+extern.h
+K 25
+svn:wc:ra_dav:version-url
+V 71
+/svn/cscc69w15/group22/a3/!svn/ver/1/src/user/testbin/randcall/extern.h
+END
+Makefile
+K 25
+svn:wc:ra_dav:version-url
+V 71
+/svn/cscc69w15/group22/a3/!svn/ver/1/src/user/testbin/randcall/Makefile
+END
+gencalls.sh
+K 25
+svn:wc:ra_dav:version-url
+V 74
+/svn/cscc69w15/group22/a3/!svn/ver/1/src/user/testbin/randcall/gencalls.sh
+END
+main.c
+K 25
+svn:wc:ra_dav:version-url
+V 69
+/svn/cscc69w15/group22/a3/!svn/ver/1/src/user/testbin/randcall/main.c
+END
+callspecs.txt
+K 25
+svn:wc:ra_dav:version-url
+V 76
+/svn/cscc69w15/group22/a3/!svn/ver/1/src/user/testbin/randcall/callspecs.txt
+END

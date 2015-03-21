@@ -1,0 +1,80 @@
+10
+
+dir
+1
+https://mathlab.utsc.utoronto.ca/svn/cscc69w15/group22/a3/src/user/sbin
+https://mathlab.utsc.utoronto.ca/svn/cscc69w15/group22/a3
+
+
+
+2015-03-03T20:35:21.653092Z
+1
+root
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+92e9d0c9-9176-43d2-a009-7939aa44b2db
+
+poweroff
+dir
+
+halt
+dir
+
+sfsck
+dir
+
+reboot
+dir
+
+Makefile
+file
+
+
+
+
+2015-03-21T16:25:55.002266Z
+083876899599a92bc2460b966dfda838
+2015-03-03T20:35:21.653092Z
+1
+root
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+206
+
+dumpsfs
+dir
+
+mksfs
+dir
+
