@@ -11,16 +11,22 @@
 
 struct vnode;
 
-/*
- * filetable struct
- * just an array, nice and simple.  
- * It is up to you to design what goes into the array.  The current
- * array of ints is just intended to make the compiler happy.
- */
-struct filetable {
-	int changeme[__OPEN_MAX]; /* dummy type */
-};
-
+ /* file descriptor struct */
+ struct fdescript{
+	int flags; //flag
+	off_t offset; // offset of the file
+	int ref_count; //reference count
+	struct lock* lock; //lock the file 
+	struct vnode* v; //reference node
+ };
+ 
+ /* filetable struct */
+ struct filetable{
+	struct fdescript* fdt[__OPEN_MAX]; //array of fd
+	struct lock* lock;
+ };
+ 
+ 
 /* these all have an implicit arg of the curthread's filetable */
 int filetable_init(void);
 void filetable_destroy(struct filetable *ft);

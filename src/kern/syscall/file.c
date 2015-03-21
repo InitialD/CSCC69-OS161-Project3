@@ -12,6 +12,15 @@
 #include <file.h>
 #include <syscall.h>
 
+/* new include files */
+#include <vfs.h>
+#include <vnode.h>
+#include <copyinout.h>
+#include <synch.h>
+#include <kern/fcntl.h>
+#include <current.h>
+#include <lib.h>
+
 /*** openfile functions ***/
 
 /*
@@ -26,13 +35,49 @@
 int
 file_open(char *filename, int flags, int mode, int *retfd)
 {
-	(void)filename;
+	/*(void)filename;
 	(void)flags;
 	(void)retfd;
-	(void)mode;
-
-
-	return EUNIMP;
+	(void)mode;*/
+	
+	int status; //status
+	struct vnode *v; //reference node for vfs
+	struct fdescript *file; // created in file.h 
+	
+	/* is a valid filename */
+	if (filename == NULL)
+		return ENOENT;
+	
+	/* Can the file be opened?, return only if open fails*/
+	if ((status = vfs_open(filename, flags, mode, &v)))
+		return status;
+	
+	/* create a filetable entry, return out of memory if can't */
+	if(!(file = kmalloc(sizeof(struct fdescript))))
+		vfs_close(v);
+		return ENOMEM;
+	
+	/* Lock the fdescript, return EUNIMP */
+	if (!(file->lock = lock_create("Fdiscriptor lock")))
+		vfs_close(v);
+		kfree(file); //clear the allocation of memory
+		return EUNIMP;
+		
+	/* attach values to the file fields */
+	file->flags = flags;
+	file->offset = 0;
+	file->ref_count = 0;
+	file->v = v;
+	
+	/* Inject into kernel*/
+	KASSERT(curthread->t_filetable != NULL);
+	if((status = filetable_inject(file, retfd)))
+		lock_destroy(file->lock);
+		vfs_close(v);
+		kfree(file);
+		return status;
+	
+	return 0;
 }
 
 
@@ -45,9 +90,36 @@ file_open(char *filename, int flags, int mode, int *retfd)
 int
 file_close(int fd)
 {
-        (void)fd;
+    /*(void)fd;*/
+	struct fdescript *file;
+	int status;
+	
+	/* retrieve the file */
+	if ((status = filetable_status(&file, fd)))
+		return status;
+	
+	/* acquire lock so no others are pointing at it */
+	lock_acquire(file->lock);
+	
+	/* alter the reference counter*/
+	file->ref_count = ref_count - 1;
+	
+	/* if none are referencing*/
+	if (file->ref_count <= 0)
+		vfs_close(file->v); //close the vnode
+		/* release and destroy the lock */
+		lock_release(file->lock);
+		lock_destroy(file->lock);
+		kfree(file); //free memory
+	else
+		lock_release(file->lock);
+	
+	/* adjust the filetable entry, fd, with NULL */
+	lock_acquire(curthread->t_filetable->lock);
+	curthread-t_filetable->fdt[fd] = NULL;
+	lock_release(curthread-t_filetable->lock);
 
-	return EUNIMP;
+	return 0;
 }
 
 /*** filetable functions ***/
@@ -94,5 +166,11 @@ filetable_destroy(struct filetable *ft)
  * the current file position) associated with that open file.
  */
 
+ /* inject into table*/
+ int filetable_inject(struct fdescript *file, int fd)
+	return 0;
+ 
+ int filetable_status(struct fdescript **file, int fd)
+	return 0;
 
 /* END A3 SETUP */
