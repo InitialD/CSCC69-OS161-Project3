@@ -168,7 +168,8 @@ cmd_progthread(void *ptr, unsigned long nargs)
 	strcpy(progname2,args[0]); /* demke: make extra copy for runprogram */
 	free_args(nargs, args);
 
-	result = runprogram(progname2);
+	result = runprogram(progname2, nargs, args);
+	free_args(nargs, args);
 	if (result) {
 		kprintf("Running program %s failed: %s\n", progname,
 			strerror(result));
