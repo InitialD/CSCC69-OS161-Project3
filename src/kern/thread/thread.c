@@ -573,6 +573,21 @@ thread_fork(const char *name,
 	 * (see notes at bottom of thread_switch), we need to account
 	 * for the spllower() that will be done releasing it.
 	 */
+	 
+	 
+	 /* fork for filetable */
+	if (curthread->t_filetable != NULL) {
+		lock_acquire(curthread->t_filetable->lock);
+		newthread->t_filetable = kmalloc(sizeof(struct filetable));
+		newthread->t_filetable->lock = lock_create("filetable lock");
+		for (int i = 0; i < __OPEN_MAX; i++) {
+			if (newthread->t_filetable->fdt[i] == NULL)
+				newthread->t_filetable->fdt[i] = kmalloc(sizeof(struct fdescript));
+			newthread->t_filetable->fdt[i]->ref_count++;
+			newthread->t_filetable->fdt[i] = curthread->t_filetable->fdt[i];
+		}
+		lock_release(curthread->t_filetable->lock);
+	}
 	newthread->t_iplhigh_count++;
 
 	/* Set up the switchframe so entrypoint() gets called */
