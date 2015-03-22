@@ -28,7 +28,7 @@ struct vnode;
  
  
 /* these all have an implicit arg of the curthread's filetable */
-int filetable_init(void);
+int filetable_init(struct filetable *ft);
 void filetable_destroy(struct filetable *ft);
 
 /* opens a file (must be kernel pointers in the args) */

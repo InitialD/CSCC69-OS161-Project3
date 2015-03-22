@@ -140,8 +140,48 @@ file_close(int fd)
  */
 
 int
-filetable_init(void)
+filetable_init(struct filetable *ft)
 {
+	int flag, err;
+	struct fdescript fdep[3];
+	struct vnode *v;
+	
+	/* Lock the table */
+	ft->lock = lock_create("filetable");
+	for(int i = 0; i < 3; i++)
+		/* allocate memory for node and descriptor */
+		fdep[i] = (struct fdescript *)kmalloc(sizeof(struct fdescript));
+		v = (struct vnode *)kmalloc(sizeof(struct vnode));
+		
+		/* if NULL destroy filetable */
+		if (v == NULL)
+			return ENOMEM;
+		if (fdep[i] == NULL)
+			filetable_destroy(ft);
+			return ENOMEM;
+		
+		/* set flags */
+		if (i == 0)
+			flag = O_RDONLY;
+		else
+			flag = O_WRONLY;
+		
+		/* copy the path */
+		strcpy(path, "con:");
+		
+		/*open the path*/
+		if((err = vfs_open(path, flag, mode, &v)))
+			vfs_close(v);
+			filetable_destroy(ft);
+			return err;
+		
+		/* set the fileds of the descriptor*/
+		fdesc[i]->v = v;
+		fdesc[i]->flags = flag;
+		fdesc[i]->offset = 0;
+		fdesc[i]->ref_count = 0;
+		ft->fdt[i] = fdep[i];
+	
 	return 0;
 }	
 
