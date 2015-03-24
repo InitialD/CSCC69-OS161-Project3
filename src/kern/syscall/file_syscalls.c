@@ -189,28 +189,32 @@ sys_read(int fd, userptr_t buf, size_t size, int *retval)
 	struct iovec user_iov;
 	int result;
 	int offset = 0;
-
-	/* Make sure we were able to init the cons_vnode */
-	if (cons_vnode == NULL) {
-	  return ENODEV;
-	}
+	struct vnode * dv = NULL; 
+	struct fdescript * file = NULL;
 
 	/* better be a valid file descriptor */
 	/* Right now, only stdin (0), stdout (1) and stderr (2)
 	 * are supported, and they can't be redirected to a file
 	 */
-	if (fd < 0 || fd > 2) {
+	if (fd < 0 || fd >== __OPEN_MAX) {
 	  return EBADF;
 	}
+	
+	if ((result = filetable_status(&file, fd)))
+		return result;
+	
+	dv = file->v;
 
 	/* set up a uio with the buffer, its size, and the current offset */
-	mk_useruio(&user_iov, &user_uio, buf, size, offset, UIO_READ);
+	mk_useruio(&user_iov, &user_uio, buf, size, file->offset, UIO_READ);
 
 	/* does the read */
 	result = VOP_READ(cons_vnode, &user_uio);
 	if (result) {
 		return result;
 	}
+	
+	file->offset += size;
 
 	/*
 	 * The amount read is the size of the buffer originally, minus
@@ -247,18 +251,18 @@ sys_write(int fd, userptr_t buf, size_t len, int *retval)
         struct iovec user_iov;
         int result;
         int offset = 0;
-
-        /* Make sure we were able to init the cons_vnode */
-        if (cons_vnode == NULL) {
-          return ENODEV;
-        }
-
+		struct vnode * dv = NULL; 
+		struct fdescript *file = NULL;
         /* Right now, only stdin (0), stdout (1) and stderr (2)
          * are supported, and they can't be redirected to a file
          */
-        if (fd < 0 || fd > 2) {
+        if (fd < 0 || fd >= __OPEN_MAX) {
           return EBADF;
         }
+		
+		if((result = filetable_status(&file, fd)))
+			return result;
+		dv = file->v;
 
         /* set up a uio with the buffer, its size, and the current offset */
         mk_useruio(&user_iov, &user_uio, buf, len, offset, UIO_WRITE);
