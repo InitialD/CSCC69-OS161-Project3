@@ -122,11 +122,46 @@ sys_close(int fd)
 int
 sys_dup2(int oldfd, int newfd, int *retval)
 {
-        (void)oldfd;
-        (void)newfd;
-        (void)retval;
-
-	return EUNIMP;
+	if (oldfd < 0 || oldfd >= __OPEN_MAX || newfd < 0 || newfd >= __OPEN_MAX)
+		return EBADF;
+	
+	if (oldfd == newfd){
+		*retval = newfd;
+		return 0;
+	}
+	
+	struct fdescript *old;
+	struct fdescript *new;
+	
+	old = (struct fdescript *)kmalloc(sizeof(struct fdescript));
+	if (old == NULL)
+		return ENOMEM;
+	
+	lock_acquire(curthread->t_filetable->lock);
+	old = curthread->t_filetable->fdt[oldfd];
+	if (old == NULL){
+		lock_release(curthread->t_filetable->lock);
+		return EBADF;
+	}
+	
+	new = curthread->t_filetable->fdt[newfd];
+	
+	if (new != NULL)
+		file_close(newfd);
+	
+	new = (struct fdescript *)kmalloc(sizeof(struct fdescript));
+	if (new == NULL)
+		return ENOMEM;
+	
+	if(!(old->lock))
+		old->lock = lock_create("old descripter");
+	
+	if (!(new->lock))
+		new->lock = lock_create("new descripter");
+	
+	lock_release(curthread->t_filetable->lock);
+	*retval = newfd;
+	return 0;
 }
 
 /*
