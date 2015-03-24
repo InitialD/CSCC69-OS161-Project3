@@ -289,12 +289,48 @@ sys_write(int fd, userptr_t buf, size_t len, int *retval)
 int
 sys_lseek(int fd, off_t offset, int whence, off_t *retval)
 {
-        (void)fd;
-        (void)offset;
-        (void)whence;
-        (void)retval;
-
-	return EUNIMP;
+	off_t new_oft;
+	int result;
+	struct stat t;
+	struct fdescript * d = NULL;
+	
+	if (fd < 0 || fd >= __OPEN_MAX)
+		return EBADF;
+	
+	if((result = filetable_status(&d, fd)))
+		return result;
+	
+	lock_acquire(d->lock);
+	if (whence == SEEK_SET)
+		new_oft = offset;
+	else if (whence == SEEK_CUR)
+		new_oft = d->offset + offset;
+	else if (whence == SEEK_END){
+		result = VOP_STAT(d->v, &t);
+		if (result){
+			lock_release(d->lock);
+			return result;
+		}
+		new_oft = t.st_size + offset;
+	}
+	else {
+		lock_release(d->lock);
+		return EINVAL;
+	}
+	if (d = NULL)
+		return ENOMEM;
+	if (new_oft < 0){
+		lock_release(d->lock);
+		return EINVAL;
+	}
+	if ((result = VOP_TRYSEEK(d->v, new_oft))){
+		lock_release(d->lock);
+		return result;
+	}
+	*retval = new_oft;
+	d->offset = new_oft;
+	lock_release(d->lock);
+	return 0;
 }
 
 
@@ -307,9 +343,14 @@ sys_lseek(int fd, off_t offset, int whence, off_t *retval)
 int
 sys_chdir(userptr_t path)
 {
-        (void)path;
+    (void)path;
+	char p[__NAME_MAX];
+	int status;
+	
+	if((status = copyinstr(path, p, __NAME_MAX, NULL)))
+		return status;
 
-	return EUNIMP;
+	return vfs_chdir(p);
 }
 
 /*
@@ -319,11 +360,17 @@ sys_chdir(userptr_t path)
 int
 sys___getcwd(userptr_t buf, size_t buflen, int *retval)
 {
-        (void)buf;
-        (void)buflen;
-        (void)retval;
+    struct uio user_uio;
+	struct iovec user_iov;
+	int status;
+	
+	mk_useruio(&user_iov, &user_uio, buf, buflen, 0 , UIO_READ);
+	if((status = vfs_getcwd(&user_uio)))
+		return status;
+	
+	*retval = user_iov.iov_len;
 
-	return EUNIMP;
+	return 0;
 }
 
 /*
@@ -332,10 +379,28 @@ sys___getcwd(userptr_t buf, size_t buflen, int *retval)
 int
 sys_fstat(int fd, userptr_t statptr)
 {
-        (void)fd;
-        (void)statptr;
-
-	return EUNIMP;
+    struct iovec iov;
+	struct uio u;
+	int status;
+	struct fdescript* file;
+	struct stat filestat;
+	
+	if (fd < 0 || fd >= __OPEN_MAX){
+		return EBADF;
+	}
+	if (!(file = curthread->t_filetable->fdt[fd])){
+		return EBADF;
+		status = VOP_STAT(file->v, &filestat);
+		if (status)
+			return ENOENT;
+	}
+	
+	copyout(&filestat, statptr, sizeof(struct stat));
+	mk_useruio(&iov, &u, statptr, sizeof(struct stat), 0, UIO_READ);
+	if((status = uiomove(&filestat, sizeof(struct stat), &u)))
+		return status;
+	
+	return 0;
 }
 
 /*
@@ -344,12 +409,33 @@ sys_fstat(int fd, userptr_t statptr)
 int
 sys_getdirentry(int fd, userptr_t buf, size_t buflen, int *retval)
 {
-        (void)fd;
-        (void)buf;
-	(void)buflen;
-        (void)retval;
-
-	return EUNIMP;
+    if (fd < 0 || fd >= __OPEN_MAX)
+		return EBADF;
+	
+	if (fd > 0 && fd < 3)
+		return ENOTDIR;
+	
+	struct uio user_io;
+	struct iovec user_iovec;
+	int err, result;
+	struct fdescript *d;
+	
+	if (d == NULL)
+		return EBADF;
+	
+	err = filetable_status(&fdesc, fd);
+	if (err)
+		return err;
+	
+	mk_useruio(&user_iovec, &user_io, buf, buflen, d->offset, UIO_READ);
+	result = VOP_GETDIRENTRY(d->v, &user_io);
+	
+	if (result){
+		*retval = -1;
+		return ENOENT;
+	}
+	*retval = buflen - user_io.uio_resid;
+	return 0;
 }
 
 /* END A3 SETUP */
