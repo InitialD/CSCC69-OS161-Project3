@@ -194,7 +194,17 @@ filetable_init(struct filetable *ft)
 void
 filetable_destroy(struct filetable *ft)
 {
-        (void)ft;
+    //(void)ft;
+	if (ft == NULL)
+		panic("Table is Null");
+
+	for (int i = 0; i < __OPEN_MAX; i++) {
+		if (ft->fdt[i]) {
+			file_close(i);
+			ft->fdt[i] = NULL;
+		}
+	}
+	kfree(ft);
 }	
 
 
@@ -207,10 +217,42 @@ filetable_destroy(struct filetable *ft)
  */
 
  /* inject into table*/
- int filetable_inject(struct fdescript *file, int fd)
-	return 0;
+ int filetable_inject(struct fdescript *file, int fd){
+	 struct filetable *ft = curthread->t_filetable;
+	// get lock
+	KASSERT(curthread->t_filetable != NULL);
+	lock_acquire(ft->lock);
+	/* Look through the filetable for the first opening */
+	for (int i = 0; i < __OPEN_MAX; i++)
+		if (ft->fdt[i] == NULL) {
+			lock_acquire(file->lock);
+			file->ref_count++;
+			lock_release(file->lock);
+			ft->fdt[i] = file;
+			if (fd)
+				*fd = i;
+			lock_release(ft->lock);
+			return 0;
+		}
+	lock_release(ft->lock);
+	return EMFILE;
+ }
  
- int filetable_status(struct fdescript **file, int fd)
+ int filetable_status(struct fdescript **file, int fd){
+	/* check file descriptor */
+	lock_acquire(curthread->t_filetable->lock);
+	if (fd < 0 || fd >= __OPEN_MAX) {
+		lock_release(curthread->t_filetable->lock);
+		return EBADF;
+	} 
+	else if (curthread->t_filetable->fdt[fd] == NULL) {
+		lock_release(curthread->t_filetable->lock);
+		return ENOENT;
+	}
+	*file = curthread->t_filetable->fdt[fd];
+	lock_release(curthread->t_filetable->lock);
+	
 	return 0;
+ }
 
 /* END A3 SETUP */

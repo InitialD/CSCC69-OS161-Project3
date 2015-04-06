@@ -30,6 +30,8 @@ struct vnode;
 /* these all have an implicit arg of the curthread's filetable */
 int filetable_init(struct filetable *ft);
 void filetable_destroy(struct filetable *ft);
+int filetable_inject(struct fdescript *file, int fd);
+int filetable_status(struct fdescript **file, int fd);
 
 /* opens a file (must be kernel pointers in the args) */
 int file_open(char *filename, int flags, int mode, int *retfd);
