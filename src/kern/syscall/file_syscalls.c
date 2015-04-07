@@ -122,9 +122,11 @@ sys_close(int fd)
 int
 sys_dup2(int oldfd, int newfd, int *retval)
 {
+	/* if either of new or old descriptors are out of range, return EBADF */
 	if (oldfd < 0 || oldfd >= __OPEN_MAX || newfd < 0 || newfd >= __OPEN_MAX)
 		return EBADF;
 	
+	/* if new = old, set return value to new */
 	if (oldfd == newfd){
 		*retval = newfd;
 		return 0;
@@ -138,6 +140,8 @@ sys_dup2(int oldfd, int newfd, int *retval)
 		return ENOMEM;
 	
 	lock_acquire(curthread->t_filetable->lock);
+	
+	/* entry in the table at position[old] */
 	old = curthread->t_filetable->fdt[oldfd];
 	if (old == NULL){
 		lock_release(curthread->t_filetable->lock);
@@ -146,6 +150,7 @@ sys_dup2(int oldfd, int newfd, int *retval)
 	
 	new = curthread->t_filetable->fdt[newfd];
 	
+	/* if it occupied, close it */
 	if (new != NULL)
 		file_close(newfd);
 	
@@ -185,8 +190,8 @@ sys_dup2(int oldfd, int newfd, int *retval)
 int
 sys_read(int fd, userptr_t buf, size_t size, int *retval)
 {
-	struct uio user_uio;
-	struct iovec user_iov;
+	struct uio user_uio; //user input/output
+	struct iovec user_iov; //user input/output value
 	int result;
 	int offset = 0;
 	struct vnode * dv = NULL; 
@@ -196,13 +201,17 @@ sys_read(int fd, userptr_t buf, size_t size, int *retval)
 	/* Right now, only stdin (0), stdout (1) and stderr (2)
 	 * are supported, and they can't be redirected to a file
 	 */
+	 
+	 /* if not in range, return EBADF  */
 	if (fd < 0 || fd >== __OPEN_MAX) {
 	  return EBADF;
 	}
 	
+	/* if a result from status, return  */
 	if ((result = filetable_status(&file, fd)))
 		return result;
 	
+	/* get file */
 	dv = file->v;
 
 	/* set up a uio with the buffer, its size, and the current offset */

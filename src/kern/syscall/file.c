@@ -195,15 +195,17 @@ void
 filetable_destroy(struct filetable *ft)
 {
     //(void)ft;
+	/* if null, panic*/
 	if (ft == NULL)
 		panic("Table is Null");
-
+	/* for each entry of the table, close it and assign it null */
 	for (int i = 0; i < __OPEN_MAX; i++) {
 		if (ft->fdt[i]) {
 			file_close(i);
 			ft->fdt[i] = NULL;
 		}
 	}
+	/* free the table */
 	kfree(ft);
 }	
 
@@ -241,14 +243,20 @@ filetable_destroy(struct filetable *ft)
  int filetable_status(struct fdescript **file, int fd){
 	/* check file descriptor */
 	lock_acquire(curthread->t_filetable->lock);
+	
+	/* if descriptor isn't in range */
 	if (fd < 0 || fd >= __OPEN_MAX) {
 		lock_release(curthread->t_filetable->lock);
 		return EBADF;
-	} 
+	}
+	
+	/* If that entry is NULL */
 	else if (curthread->t_filetable->fdt[fd] == NULL) {
 		lock_release(curthread->t_filetable->lock);
 		return ENOENT;
 	}
+	
+	/* otherwise, retrieve the status */
 	*file = curthread->t_filetable->fdt[fd];
 	lock_release(curthread->t_filetable->lock);
 	
