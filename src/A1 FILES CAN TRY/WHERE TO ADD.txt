@@ -1,0 +1,6 @@
+src/kern/arch/mips/syscall/syscall.h
+src/kern/include/syscall.h
+src/kern/include/test.h
+src/kern/include/synch.h
+src/kern/syscall/proc_syscalls.c
+src/kern/syscall/runprogram.c
